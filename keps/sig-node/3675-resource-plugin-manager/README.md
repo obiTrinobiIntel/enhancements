@@ -493,7 +493,7 @@ and RemoveResource handlers accordingly).
 
 2. CCI Resource Store<br>
 The Resource Manager uses a store to keep track of resourcesets which can include 
-cpusets, memory, etc ..  allocated by CCI Drivers. This information is gathered 
+cpusets, etc ..  allocated by CCI Drivers. This information is gathered 
 per container. The gathered information will be used to provide data for on-node available resources. The store offers the 
 following interface to manage resource sets.
 
