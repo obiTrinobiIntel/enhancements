@@ -22,6 +22,7 @@ Container Compute Interface (CCI) Driver Extension
     - [Compute Specification Option](#compute-specification-option)
       - [User API for Alpha: Policy-based resource specification - no scheduler impact](#user-api-for-alpha-policy-based-resource-specification---no-scheduler-impact)
       - [Options for User APIs in Post-Alpha:](#options-for-user-apis-in-post-alpha)
+      - [Attributed-based resource specification](#attributed-based-resource-specification)
       - [CCI Resource Manager Architecture](#cci-resource-manager-architecture)
       - [Allocation &amp; Container Removal Flow](#allocation--container-removal-flow)
       - [Post-Alpha &amp; GA Architectural Considerations](#post-alpha--ga-architectural-considerations)
@@ -103,10 +104,10 @@ compute focused drivers for resource assignment capabilities, such as CPU and me
 
 We propose an iterative implementation approach:
 
-In the first stage (alpha) we propose adding a new component to the kubelet called the CCIManager 
+In the first stage (alpha) we propose adding a new component to the kubelet called the CCIResourceManager 
 that focuses exclusively on providing a mechanism for pluggable CPU management policies (as a replacement
-to the builtin CPUManager and its corresponding policies). Enablement of the CCIManager will be blocked by a feature gate, 
-which, when enabled, will trigger all CPU Management decisions to flow through the CCIManager instead of the builtin CPUManager. 
+to the builtin CPUManager and its corresponding policies). Enablement of the CCIResourceManager will be blocked by a feature gate, 
+which, when enabled, will trigger all CPU Management decisions to flow through the CCIResourceManager instead of the builtin CPUManager. 
 As such, the CPUManager policy MUST be set to none if this new feature gate is enabled. This will
 be enforced by the kubelet, causing it to "fail fast" if this invariant does not hold true.
 
@@ -115,7 +116,7 @@ to enforce this requirement as well as how we plan to (temporarily) handle boots
 a pluggable CPU Management policy running can be found in Section [Throubleshooting]. In a later phase, we will provide a proper mechanism 
 to handle bootstrapping as well as cases where a driver becomes temporarily unavailable.
 
-The implication of CCI and the addition of the proposed CCI manager will be to allow compute capabilities such as CPU and memory to be managed outside
+The implication of CCI and the addition of the proposed CCI Resource Manager will be to allow compute capabilities such as CPU and memory to be managed outside
 of the Kubelet via pluggable CCI Drivers. This will allow users to augment the
 current implementation of Kubelet managed resources with support for more complex
 use-cases without having to modify the Kubelet. The CCI extensions can coexist 
@@ -529,7 +530,7 @@ error if the operation failed on the driver side.
     CCIDriver is a grpc service interface for CCI resource kubelet drivers.
     The interface provides admission, allocation and cleanup entrypoints.
     Drivers are registered  as kubelet plugins and will be called by the 
-    CCI resource manager for pods which are associated with this driver.
+    CCI Resource Manager for pods which are associated with this driver.
     */
     service CCIDriver {
       //cciAdmit admission function to reserve resources for a given container
@@ -605,7 +606,8 @@ register it against Kubelet's CCI Resource Manager.
 6.	CCI Drivers Registration<br>
 The CCI driver registration can be handled by the kubelet plugin framework. 
 This approach is already used with device plugins and DRA plugins. The approach
-will be sufficient the cover drivers registration, status and health-check functionality.
+will be sufficient the cover drivers registration, status and health-check functionality. The framework also provides a versioning 
+mechanism for plugins (similar to DRA approach).
 
 
 ##### Allocation & Container Removal Flow
@@ -629,7 +631,7 @@ Container Removal:<br>
 
 Figure 3: Container removal sequence diagram involving CCI drivers<br><br>
 The container removal case is described as a sequence in Figure 3. After registering
-a removal event in the internal container lifecycle, the CCI manager is triggered 
+a removal event in the internal container lifecycle, the CCI Resource Manager is triggered 
 and invokes the CCI Driver to free any resources takes by the container. On
 success, the CCI store will be also cleaned and a new available resource set will 
 be updated. All blocking rpc calls are configured with
@@ -641,10 +643,10 @@ After the initial alpha implementation we will consider the integration of the
 Container Compute Interface “CCI” with exisiting CPU and Memory manager stack
 This can be achieved either by using already existing managers and introducing state 
 synchronization or through a common code base which can be invoked 
-from within the CCI Manager.
+from within the CCI Resource Manager.
 
 A possible integation with topology manager could follow by implementing the topology hints 
-interface for the CCI Manager which will use data extracted from CCI Store. This will 
+interface for the CCI Resource Manager which will use data extracted from CCI Store. This will 
 require such data to be provided by CCI Drivers and the CCI store has to be extended to 
 be able to handle it correctly for serving the corresponding topology hints calls.
 
@@ -659,29 +661,34 @@ to implement this enhancement.
 
 ###### Alpha
 
-* CCI Resource Manager (CPU): target code cvg >=80%
-* CCI Store (CPU): target code cvg >=80%
+* CCI Resource Manager (CPU, Feature Gate): target code cvg >=80%
+* CCI Store (CPU, persistancy): target code cvg >=80%
 * CCI Drivers Factory API: target code cvg >=80%
+* Scheduling on nodes running CCI (policy based) cvg >=80%
 
 ###### BETA
 
-* CCI Resource Manager (CPU + Memory): target code cvg >=80%
+* CCI Pod Association tests: target code cvg >=80%
+* CCI Resource Manager (CPU + Memory, persistancy, Feature Gate): target code cvg >=80%
 * CCI Store (CPU + Memory): target code cvg >=80%
+* Scheduling on nodes running CCI (policy based and attribute-based) with and without drivers cvg >=80%
 * Pod Admission Race tests
 * Introduce fail-safety tests
-* Performance/Scalabilty tests
 
 
 ##### Integration tests
 ###### Alpha
-* CCI Manager Integration test for cpu use-cases: driver-based allocation and best-effort QoS 
+* CCI Resource Manager Integration test for cpu use-cases: driver-based allocation and best-effort QoS
+* CCI Driver failure condition tests
 * Kubelet restart integration test
 * System-reserved resources test
 ###### BETA
 * CPU Manager None, Static Policy Integration with CCI
-* CPU, Memory, Topology and CCI Manager Integration test
+* CPU, Memory, Topology and CCI Resource Manager Integration test
 * Further integration tests with Device Manager and DRA
 * Integration test including static QoS and driver-based allocation
+* Monitoring of CCI Drivers health tests
+* Performance/Scalabilty tests
 
 ##### e2e tests
 ###### Alpha
@@ -693,6 +700,7 @@ to implement this enhancement.
 * End-to-End tests to cover all cci resource allocation use-cases
 * End-to-End tests to cover CCI Driver associtation mechanism
 * End-to_End tests with device plugins and DRA
+* End-to_End Scheduling on nodes running CCI (policy based and attribute-based) with and without drivers cvg >=80%
 * Performance and resource utilization tests
 
 
@@ -739,7 +747,7 @@ enhancement:
 
 ### Version Skew Strategy
 
-TBD in Beta
+Version handling of Drivers will happend through the kubelet plugin framework. We will use semantic versions starting from alpha for the driver and update according to graduation process.
 <!--
 If applicable, how will the component handle version skew with other
 components? What are the guarantees? Make sure this is in the test plan.
@@ -759,7 +767,8 @@ enhancement:
 
 #### Alpha
 Before having a driver in the system, or if one is not available, we default to
-best effort QoS for incoming pods.
+best effort QoS for incoming pods. This will ensure that we can start 
+the cluser initial pods such as cni-pods, dns-pods and CCI Driver pod. 
 
 A newly installed CCI Driver becomes responsible to handle incoming pods.  It is 
 responsible for reading the state from the kubelet on startup.
@@ -780,7 +789,7 @@ the driver comes up or failed after a configurable timeout.
 
 - [x] Feature gate (also fill in values in `kep.yaml`)
   - Feature gate name: CCIResourceManager
-  - Components depending on the feature gate: CCIResourceManager, Kubelet
+  - Components depending on the feature gate: Kubelet
 - [ ] Other
   - Describe the mechanism:
   - Will enabling / disabling the feature require downtime of the control
@@ -790,12 +799,12 @@ the driver comes up or failed after a configurable timeout.
 
 ###### Does enabling the feature change any default behavior?
 
-No
+Yes, if enabled resource allocation for pods will be handled by CCI Resource Manager and CCI Drivers.
 
 
 ###### Can the feature be disabled once it has been enabled (i.e. can we roll back the enablement)?
 
-Yes, a deletion of pods requiring cci driver will be recommended
+Yes, a deletion of pods requiring CCI driver will be recommended. Addition cleanup on the node and a kubelet restart will be required.
 
 ###### What happens if we reenable the feature if it was previously rolled back?
 
@@ -809,12 +818,11 @@ Yes.
 
 The usual Kubernetes upgrade and downgrade strategy applies for in-tree components. 
 Vendors must take care that upgrades and downgrades work with the drivers that
-they provide to customers
+they provide to customers.
   
 Pods which require CCI Driver will fail starting and report an error due to driver 
-unavailability.  If a CCI Driver fails, Pods which were about to be allocated
-that were tied to the driver will fail. Based on requirements a fallback mechanism 
-can be implemented where such Pods fallback to a given std. QoS Model.
+unavailability. If a CCI Driver fails, Pods which were about to be allocated
+that were tied to the driver will fail.
 
 ###### How can a rollout or rollback fail? Can it impact already running workloads?
 
@@ -826,7 +834,7 @@ an error message showing failure of the driver.
 ###### What specific metrics should inform a rollback?
 
 Unhealthy CCI drivers which can't get to a ready state and repeated failures 
-to allocate pods in cases of free resources.
+to allocate pods in cases of free resources, or cases where a node reports no free to the scheduler but the resource were not used (can be detected via available cpu resource counters on the node). 
 
 
 ###### Were upgrade and rollback tested? Was the upgrade->downgrade->upgrade path tested?
@@ -841,7 +849,8 @@ TBD in Beta
 
 ### Monitoring Requirements
 
-TBD in Beta
+Alpha: available cpus
+Beta: available cpus and other resource metrics(based on attributed)
 
 
 ###### How can an operator determine if the feature is in use by workloads?
@@ -855,16 +864,14 @@ Additionally, available resources will be updated.
 - [ ] Events
   - Event Reason: 
 - [x] API .status
-  - Condition name: CCI Driver readiness and CCI Status field can be introduced
+  - Condition name: CCI Driver Pod Readiness (populated by kubelet)
   - Other field: 
 - [ ] Other (treat as last resort)
   - Details:
 
 ###### What are the reasonable SLOs (Service Level Objectives) for the enhancement?
-
-Pods not using CCI Drivers continue to work as before. Consistent state handling for 
-pods which require a CCI Driver.
-
+Alpha: k8s Cluster can be started without driver
+Beta: Pods not using CCI Drivers continue to work as before. 
 
 ###### What are the SLIs (Service Level Indicators) an operator can use to determine the health of the service?
 
@@ -885,7 +892,7 @@ TBD in Beta
 Describe the metrics themselves and the reasons why they weren't added (e.g., cost,
 implementation difficulties, etc.).
 -->
-TBD in Beta
+* Liveness indicator for CCI Driver(post-alpha)
 
 ### Dependencies
 
@@ -896,19 +903,21 @@ This section must be completed when targeting beta to a release.
 
 ###### Does this feature depend on any specific services running in the cluster?
 
-A CCI Driver (daemonset) will be required to handle pods which need CCI Driver resource management.
+No, CCI Driver does not require an external service to be operational.
 
 ### Scalability
 
 The CCI Resource Manager approach resembles device manager protocol. The scalability and performance impact will be similar to the case of handling device plugins.
 
-Further performance benchmarks will be done in Beta Phase
+Further performance benchmarks will be done in Beta Phase.
 
 
 ###### Will enabling / using this feature result in any new API calls?
 
+In alpha phase: no
+In post-alpha pahase: 
 For Pods requiring CCI Driver the admission, container add and container removal operations will be handled via 
-api call to external CCI Driver. Remaining pods should be handled as before.
+api call to external CCI Driver. Remaining pods should be handled as before (post alpha phase).
 
 ###### Will enabling / using this feature result in introducing new API types?
 
@@ -933,13 +942,11 @@ No
 ### Troubleshooting
   
 In alpha phase we propose to handle bootstrapping and failures due unavailable drivers 
-by going back to best-effort QoS. In post-alpha phase we will consider solutions of the bootstrapping and driver failure problem
-though an association mechanism between pods and drivers. If a pod does not require a driver CCI Manager can 
+by going back to best-effort QoS (in post-alpha this should result to pod failure). In post-alpha phase we will consider solutions of the bootstrapping and driver failure problem
+though an association mechanism between pods and drivers. If a pod does not require a driver CCI Resource Manager can 
 provide allocation for this pod without and driver invocations, which will allow a smooth bootstrapping procedure of the cluster.
 
-If a CCI Driver fails, Pods associated with a driver which were about to be allocated will fail. Based on 
-requirements a fallback mechanism can be implemented where such Pods fallback to 
-a given std. QoS Model. 
+After alpha phase if a CCI Driver fails, Pods associated with a driver which were about to be allocated will fail. 
 
 ![image](CCITroubleshooting.jpg)<br>
 
@@ -1000,5 +1007,4 @@ TBD in Beta.
 ## Infrastructure Needed 
   
 We may choose to add in a repo that allows donations of drivers specific to particular
-use cases, in the way that we already do so for Kubernetes scheduler Plugins.  This 
-will allow a central place for the community to donate useful content.
+use cases, in the way that we already do so for Kubernetes scheduler Plugins. This will allow a central place for the community to donate useful content.
