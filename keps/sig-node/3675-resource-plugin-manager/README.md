@@ -22,7 +22,7 @@ Container Compute Interface (CCI) Driver Extension
     - [Compute Specification Option](#compute-specification-option)
       - [User API for Alpha: Policy-based resource specification - no scheduler impact](#user-api-for-alpha-policy-based-resource-specification---no-scheduler-impact)
       - [Options for User APIs in Post-Alpha:](#options-for-user-apis-in-post-alpha)
-      - [Resource Manager Architecture](#resource-manager-architecture)
+      - [CCI Resource Manager Architecture](#cci-resource-manager-architecture)
       - [Allocation &amp; Container Removal Flow](#allocation--container-removal-flow)
       - [Post-Alpha &amp; GA Architectural Considerations](#post-alpha--ga-architectural-considerations)
   - [Test Plan](#test-plan)
@@ -99,25 +99,24 @@ innovations related to newer CPU architectures is difficult and high cost to com
 This proposal aims to address the challenges by introducing a new Container Compute 
 Interface (CCI). The CCI is conceptually equivalent to the [CSI](https://github.com/kubernetes/design-proposals-archive/blob/main/storage/container-storage-interface.md) in that it will 
 delineate between the responsibility of the Kubelet and the responsibility of lower-level, 
-compute focused plugins for resource assignment capabilities, such as CPU and memory.
+compute focused drivers for resource assignment capabilities, such as CPU and memory.
 
-We propse an iterative implementation approach:
+We propose an iterative implementation approach:
 
-In the first stage (alpha) we propose to add a new component to the kubelet called the CCIManager 
+In the first stage (alpha) we propose adding a new component to the kubelet called the CCIManager 
 that focuses exclusively on providing a mechanism for pluggable CPU management policies (as a replacement
 to the builtin CPUManager and its corresponding policies). Enablement of the CCIManager will be blocked by a feature gate, 
 which, when enabled, will trigger all CPU Management decisions to flow through the CCIManager instead of the builtin CPUManager. 
 As such, the CPUManager policy MUST be set to none if this new feature gate is enabled. This will
 be enforced by the kubelet, causing it to "fail fast" if this invariant does not hold true.
 
-For now, only a single plugin will be allowed to run on a node at any given time. Details of how we plan 
+For now, only a single driver will be allowed to run on a node at any given time. Details of how we plan 
 to enforce this requirement as well as how we plan to (temporarily) handle bootstrapping a node that does not yet have 
 a pluggable CPU Management policy running can be found in Section [Throubleshooting]. In a later phase, we will provide a proper mechanism 
-to handle bootstrapping as well as cases where a plugin becomes temporarily unavailable.
+to handle bootstrapping as well as cases where a driver becomes temporarily unavailable.
 
-The implication of CCI and the addition of the proposed CCI plugin manager 
-will be to allow compute capabilities such as CPU and memory to be managed outside
-of the Kubelet via pluggable CCI Drivers.  This will allow users to augment the
+The implication of CCI and the addition of the proposed CCI manager will be to allow compute capabilities such as CPU and memory to be managed outside
+of the Kubelet via pluggable CCI Drivers. This will allow users to augment the
 current implementation of Kubelet managed resources with support for more complex
 use-cases without having to modify the Kubelet. The CCI extensions can coexist 
 with the existing CPU and memory allocation technique available to Kubernetes users today.
@@ -137,7 +136,7 @@ becoming internal to the Kubelet continues to increase; we should find a more
 dynamic and pluggable way of handling these resources.  
 
 Operating systems work by allowing drivers and pluggable resources.  This includes various
-policies in how cpu, memory, and devices are allocated.  Kubernetes can be viewed as being 
+policies in how CPU, memory, and devices are allocated.  Kubernetes can be viewed as being 
 an the operating system of the cloud.  Allowing specialty modules to address the use cases
 directly, rather than continuing to add complexity by continuing to modify the kubelet, 
 will allow the greatest scope of abilities while halting continued increases of complexity 
@@ -181,9 +180,9 @@ today and move the complexity into external drivers.
 #### Alpha Goals
 
 1.  Provide Initial infrastructure to support CCI Drivers and k8s Deployments requiring CCI Drivers.
-1.  Provide a feature gate to enable CCI Manager. The feature will require CPU Manager policy set to None.
+1.  Provide a feature gate to enable CCI Resource Manager. The feature will require CPU Manager policy set to None.
 1.  Provide a CCI test driver which can demonstrate CCI Driver implementation requirementes and several resource management use-cases for cpu.
-1.  Provide documentation of the CCI Manager and the provided test driver plus illustration of the currently covered use-cases, including a sample driver.
+1.  Provide documentation of the CCI Resource Manager and the provided test driver plus illustration of the currently covered use-cases, including a sample driver.
 1.  Provide end-to-end tests using the sample driver.
 1.  Support seamless k8s start.
 1.  CCI Driver results (cpusets) are passed back to kubelet and allocated.
@@ -445,7 +444,7 @@ Cons:
   * Requires Controller which can deal with cpu and memory resources
   * Scalability 
 
-##### Resource Manager Architecture
+##### CCI Resource Manager Architecture
 
 The extension consists of an optional CCI driver inside Pod spec which
 indicates if a CCI driver exists, then it shall process compute resources.
@@ -500,6 +499,9 @@ following interface to manage resource sets.
         +RemoveResource(container)
         +AvailablResources(): resourceset
 
+The resource sets are getting stored in a map where the lookup 
+is done via pod id and container name. For alpha verions the resource set includes the cpuset. In later stage the resource set will be extended with memory affinity information. The map together with the currently available resource will be serialized to 
+the file system to ensure proper covarage of kubelet restart and recovery scenarious.
 
 4. CCI Driver Interface<br>
 The initial interface of resource management drivers is very simple and consists 
@@ -511,13 +513,11 @@ of three functions:
 
 `CCIAdmit` function provides information if a given container belonging to a
 Pod and having a specific CCI spec can be admitted to next stage of the allocation 
-pipeline. The admission will return a reserved resource-set or error. In case of 
-successful admission the resource set will be stored in the CCI Storeand allocated. In the case of failure the error is reported
-back to user and the Pod allocation is cancelled. In the admission function we pass a list of available cpusets which can allow us to inform drivers about system-reserved resources.
+pipeline. In alpha version CCI spec will include parts of the pod spec which are related to user input (see Sec. [Compute Specification Option]). The admission will return a reserved resource-set or error. In case of successful admission the resource set will be stored in the CCI Store. In the case of failure the error is reported back to user and the Pod allocation is cancelled. In the admission function we pass a list of available cpusets which allow us to inform drivers about system-reserved resources.
 
 `CCIAddContainerResource` function is called before container start with a given 
 Pod name and container name, cgroup of Pod and the container id. The driver than
-performs an allocation of the admitted resource-set.  In case of failure of the
+performs an allocation of the admitted resource-set. The cpuset gets allocted via the runtime. In case of failure of the
 driver and error is returned.
 
 `CCIRemoveContainerResource` function is called to free the cpu resources taken
