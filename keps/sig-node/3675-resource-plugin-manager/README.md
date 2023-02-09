@@ -78,7 +78,6 @@ Items marked with (R) are required *prior to targeting to a milestone / release*
 
 ## Summary
 
-The authors have taken inspiration from the [CSI development](https://github.com/kubernetes/design-proposals-archive/blob/main/storage/container-storage-interface.md). 
 Kubernetes compute management is tightly integrated with the Kubelet and the 
 existing suite of resources managers including the topology manager, CPU manager, 
 memory manager, and device manager. While these managers have added functionality that 
@@ -97,22 +96,23 @@ on resources or to provide a mechanism to progressively roll-out the benefits of
 innovations related to newer CPU architectures is difficult and high cost to community resources.
 
 This proposal aims to address the challenges by introducing a new Container Compute 
-Interface (CCI). The CCI is conceptually equivalent to the CSI in that it will 
-delineate between the responsibility of the Kubelet and lower-level responsibility
-of compute focused plugins for resource assignment capabilities, such CPU and memory. 
+Interface (CCI). The CCI is conceptually equivalent to the [CSI](https://github.com/kubernetes/design-proposals-archive/blob/main/storage/container-storage-interface.md) in that it will 
+delineate between the responsibility of the Kubelet and the responsibility of lower-level, 
+compute focused plugins for resource assignment capabilities, such as CPU and memory.
 
-We are propsing an iterative implementation approach: in the first stage (alpha) we 
-propose to guarantee the exclusive operation of CCI Manager on cpu and memory resources
-through a feature gate and a requirement to have CPU Manager Policy as None. All pods will be handled 
-by the new CCI Manager. This will allow us to avoid state synchronization issues with cpu manager.
-To avoid the bootstrapping and driver-unavailability problems of CCI we propose to 
-use best-effort handling of those cases inside CCI Manager in the alpha stage of the implementation augmented with additional logging. 
+We propse an iterative implementation approach:
 
-In a later phase of the implementation we can provide a proper mechanism to handle driver unavailability cases. 
-Given the existing Kubelet CPU/memory manager capabilities and their usefulness 
-for many scenario, we would also like to consider if resource management for certain pods have to be handled without drivers and if we need 
-to associate specific pods with CCI Drivers (association mechanisms will be investigated in 
-later phase).
+In the first stage (alpha) we propose to add a new component to the kubelet called the CCIManager 
+that focuses exclusively on providing a mechanism for pluggable CPU management policies (as a replacement
+to the builtin CPUManager and its corresponding policies). Enablement of the CCIManager will be blocked by a feature gate, 
+which, when enabled, will trigger all CPU Management decisions to flow through the CCIManager instead of the builtin CPUManager. 
+As such, the CPUManager policy MUST be set to none if this new feature gate is enabled. This will
+be enforced by the kubelet, causing it to "fail fast" if this invariant does not hold true.
+
+For now, only a single plugin will be allowed to run on a node at any given time. Details of how we plan 
+to enforce this requirement as well as how we plan to (temporarily) handle bootstrapping a node that does not yet have 
+a pluggable CPU Management policy running can be found in Section [Throubleshooting]. In a later phase, we will provide a proper mechanism 
+to handle bootstrapping as well as cases where a plugin becomes temporarily unavailable.
 
 The implication of CCI and the addition of the proposed CCI plugin manager 
 will be to allow compute capabilities such as CPU and memory to be managed outside
@@ -120,6 +120,8 @@ of the Kubelet via pluggable CCI Drivers.  This will allow users to augment the
 current implementation of Kubelet managed resources with support for more complex
 use-cases without having to modify the Kubelet. The CCI extensions can coexist 
 with the existing CPU and memory allocation technique available to Kubernetes users today.
+
+NEW Although our alpha implementation provides an alternate route for managing CPUs through pluggable CPU management drivers, the long-term goal is to allow these drivers to be used NEW side-by-side with the built-in policies. Pods will be able to choose which policy they want their CPUs allocated with, and the machinery in the kubelet will take care to ensure NEW the proper CPU Management policy is invoked (be that from a builtin policy or from a driver).
 
 These changes will allow the community to disaggregate the long-term 
 stability and advancement of the Kubelet from the task of improving the compute 
@@ -149,7 +151,7 @@ Users would like to be able to address the following use cases:
   extend this ability.
 * Differentiate between different configurations of cores and memory, for instance cores
   designated as performance versus those designated as efficiency cores 
-* Have custom plugins to optimize for particular types of workloads.  These plugins
+* Have custom driver to optimize for particular types of workloads.  These drivers
   may be built for performance, power reduction, cpu savings, et cetera.  <br>
   Note:  Currently, there are very limited sets of available topology policies.  Every
   new policy must be approved and be lockstep with the Kuberenetes release process.
@@ -171,13 +173,13 @@ without the need to query the k8s controlplane.
 
 This design will also use gRPC, which is used for many other pluggable components within Kubernetes.  
 The hope is that it will also, as a side effect, allow a path to simplify the Kubelet as it is 
-today and move the complexity into external plugins.
+today and move the complexity into external drivers.
 
 ### Goals
 
 #### Alpha Goals
 
-1.  Provide Initial infrastructure to support CCI Driver Plugins and k8s Deployments requiring CCI Drivers after scheduling
+1.  Provide Initial infrastructure to support CCI Drivers and k8s Deployments requiring CCI Drivers.
 1.  Provide a feature gate to enable CCI Manager. The feature will require CPU Manager policy set to None.
 1.  Provide a CCI test driver which can demonstrate CCI Driver implementation requirementes and several resource management use-cases for cpu and memory.
 1.  Provide documentation of the CCI Manager and the provided test driver plus illustration of the currently covered use-cases, including a sample driver.
@@ -266,11 +268,17 @@ internal managers is a decisive benefit to the research community.
 Users, analog to the use case for Telco/HPC/AI/ML, similarly need fine-grained
 control over their core placement decisions.
 
-#### User-specific plugins
+#### User-specific Drivers
 
 A user may have very specific allocation patterns they require. This sort of capability
 may be rare and not belong upstream in mainstream Kubernetes, but there should still
 be a simple way to allow users to meet their specific experiments.
+
+#### Roles
+
+1. Cluster operator or a system administrator is responsible to enable CCIResourceManager feature gate on kubelet and install a CCI Driver.
+1. CCI Drivers can be vendor specific or community drivers. The drivers are prvided/implemented by vendors or the kubernetes community.
+1. User specify a request of resources through attribute-based request.
 
 ### Notes/Constraints/Caveats (Optional)
 
@@ -303,56 +311,136 @@ In several domains such Streaming, Telco, HPC, and AI/ML, users require
 fine-grained compute resource control to maximize their key performance 
 indicators.  They need an API option that can be made available through
 upstream Kubernetes components and specific compute resource allocation 
-plugins.
+drivers.
 
-##### Example 1: Attributed-based resource specification
+##### User API for Alpha: Policy-based resource specification - no scheduler impact
 
-One realization of such an API can be achieved by an attribute-based 
-mechanism for compute resources. The attribute-based compute resource 
-request model is a step towards improved semantic workload portability 
-that can be tried in a progressive manner with CCI. 
+The first option which we will implement is a resource allocation configuration for Kubernetes
+Pods through policy mechanism defined as annotation. The CCI Driver will process the policy for each pod/container. 
 
-In the following, there is an example of a novel approach that could be 
-fulfilled with the CCI architecture. This example presents a set of
-per-core attributes in a config-map form that enable precision beyond a policy-only based approach: 
+Example with 4 containers in the pod: 
 
-    # A resource request which consists of:
-    # 2 exclusive cores (no other processes running on them)
-    # 	* the cores shall be siblings
-    # 	* they shall run at 2.1 ghz
-    # 	* application assigned has the highest priority on the core
-    # 	* there are no IRQs on the core
-    # 6 exclusive cores(no other processes running on them)
-    # 4 shared cores(other processes can run on them) 
-    apiVersion: v1
-    kind: ConfigMap
+annotation:
+  cci.resources.alpha.kubernetes.io/pod: cci-default
+  cci.resources.alpha.kubernetes.io/container.container1: cci-exclusive
+  cci.resources.alpha.kubernetes.io/container.container2: cci-shared
+  cci.resources.alpha.kubernetes.io/container.container3: other-policy
+
+container1: 
+  resources:
+    requests:
+      cpu: <>
+      memory: <>
+    limits:
+      cpu: <>
+      memory: <>
+
+container2: 
+  resources:
+    requests:
+      cpu: <>
+      memory: <>
+    limits:
+      cpu: <>
+      memory: <>    
+
+Pros:
+  * Policy per container/pod available as a user choice
+  * New policies can be provided to users through CCI Drivers without kubelet impact
+Cons:
+  * User is required to understand the policies
+
+##### Options for User APIs in Post-Alpha:  
+
+Attributed-based resource specification 
+ 
+To realize an attribute-based mechanism for compute resources we are considering mulitple options for post-alpha stage, such as:
+
+Annotation-based: 
+
+annotation:
+  cci.resources.alpha.kubernetes.io/pod: cci-default
+  cci.resources.alpha.kubernetes.io/container.container1: sibling-cores-required
+  cci.resources.alpha.kubernetes.io/container.container2: no-sibling-cores
+  cci.resources.alpha.kubernetes.io/container.container3: other-attributes
+
+container1: 
+  resources:
+    requests:
+      cpu: <>
+      memory: <>
+    limits:
+      cpu: <>
+      memory: <>
+        
+container2: 
+  resources:
+    requests:
+      cpu: <>
+      memory: <>
+    limits:
+      cpu: <>
+      memory: <> 
+
+Pros:
+  * Does not require scheduler extension
+  * Easy to process in CCI driver
+  * No API extension required
+  * More precision vs. policy only approach
+
+Cons:
+  * Better suited for specialized use-cases
+  * No attribute awareness in the scheduler (could be addressed through DRA driver-subject of post alpha)
+  * Attributes are CCI driver specific (consider standartization within sig-node)
+
+DRA-inspired Atrribute-Claims:
+
+This example presents a set of per-core attributes in a claim that enables precision beyond
+a policy-only based approach: 
+
+  # A resource request which consists of:
+  # 2 exclusive cores (no other processes running on them)
+  # 	* pairs of cores shall be SMT siblings
+  # 	* they shall run at 2.1 GHz
+  # 	* there are no IRQs on the cores
+  # 6 exclusive cores (no other processes running on them)
+  # 4 shared cores (other processes can run on them)
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: example-compute-claim-parameters
+    namespace: default
+  data:
+    cores: |
+      2
+      6
+      4
+    compute_attributes: |
+      exclusive, smt-sibling-required, 2.1GHz, no-irq
+      exclusive
+      shared
+  apiVersion: resource.k8s.io/v1alpha1
+  kind: ResourceClaimTemplate
+  metadata:
+    name: example-compute-claim-parameters-template
+    namespace: default
+  spec:
     metadata:
-      name: example-compute-claim-parameters
-      namespace: default
-    data:
-      cores: |
-    # number of core type 1
-    2
-    # number of core type 2
-    6
-    # number of core type 3
-    4
-      compute_attributes: |
-        # Attributes of core type 1
-        exclusive, smt-sibling-required, 2.1Ghz, 1.0 priority, no-irq
-        # Attributes of core type 2
-        exclusive
-        # Attributes of core type 3
-        shared
+      labels:
+        app: inline-resource
+    spec:
+      resourceClassName: CPUressources
+      parametersRef:
+        kind: ConfigMap
+        name: example-compute-claim-parameters
 
-##### Example 2.: Policy-based resource specification
 
-Another option how a resource allocation configuration for Kubernetes
-Pods could be achieved is through a policy mechanism. In this case the
-policy will be applied to all Pods to be processed. The configuration
-of the policy can happen directly in a CCI Compute Resource Driver Plugin
-as input argument in the yaml deployment. This methodology can be used to
-realize methodologies similar to the static CPU manager policy or other policies.
+Pros:
+  * Can be used to expose attribute-based configurations
+
+Cons:
+  * Requires Controller which can deal with cpu and memory resources
+  * Scalability 
 
 ##### Resource Manager Architecture
 
@@ -361,12 +449,12 @@ indicates if a CCI driver exists, then it shall process compute resources.
 The association betweed pod and CCI Driver can be also realised as a resource class 
 argument (will be considered as an option during the implementation). 
 
-In the alpha version of the Resource Manager applies driver plugins to manage resource
+In the alpha version of the Resource Manager applies drivers to manage resource
 allocations for Pods. Post-alpha we will consider if we need to explicitly mark which pods are to be handled by an allocation 
-plugin.  The overall architecture consists of a manager component – the Resource
+driver.  The overall architecture consists of a manager component – the Resource
 Manager inside the container manager, an optional Pod spec argument to identify which 
 Pods to be processed by the manager(post-alpha), a compute resource store – a component used to store
-the resource sets(cpusets, memory affinity configuration) for the resource plugins. The CCI Manager 
+the resource sets(cpusets, memory affinity configuration) for the resource drivers. The CCI Manager 
 is enabled via a feature gate. After turning on the feature gate all pod allocation requets for cpu 
 and memory will be handled by the CCI Manager.
 
@@ -396,11 +484,11 @@ Pod spec changes.
 
 1. CCI Resource Manager<br>
 These changes will need a separate resource manager component inside the container 
-manager which will handle plugin management tasks, including plugin registration and 
-invocations of registered plugins.  These tasks will be managed via grpc for Pods who 
-require one or more resource management plugin(s) to get successfully allocated.  In 
-the alpha version we provide to entry points to plugins on admission,  addContainer 
-and removeContainer lifetime events (plugins have to implement Admit, AddResource 
+manager which will handle drivers management tasks, including registration and 
+invocations of registered drivers.  These tasks will be managed via grpc for Pods who 
+require one or more resource management driver(s) to get successfully allocated.  In 
+the alpha version we provide to entry points  on admission, addContainer 
+and removeContainer lifetime events (drivers have to implement Admit, AddResource 
 and RemoveResource handlers accordingly). 
 
 2. CCI Resource Store<br>
@@ -415,8 +503,8 @@ following interface to manage resource sets.
         +AvailablResources(): resourceset
 
 
-4. CCI Drivers Plugin Interface<br>
-The initial interface of resource management plugins is very simple and consists 
+4. CCI Driver Interface<br>
+The initial interface of resource management drivers is very simple and consists 
 of three functions:
 
         +CCIAdmit(Pod, container, cci spec, *available resources) : <err, resourceset>
@@ -437,7 +525,7 @@ driver and error is returned.
 
 `CCIRemoveContainerResource` function is called to free the cpu resources taken
 by a container. The functions returns nil if the operation was successful or an
-error if the operation failed on the plugin side.
+error if the operation failed on the driver side.
 
     /* 
     CCIDriver is a grpc service interface for CCI resource kubelet drivers.
@@ -517,9 +605,9 @@ API can be used by a driver implementor to start a driver and automatically
 register it against Kubelet's CCI Resource Manager.
 
 6.	CCI Drivers Registration<br>
-The CCI driver registration can be handled by t ubeletlet plugin framework. 
+The CCI driver registration can be handled by the kubelet plugin framework. 
 This approach is already used with device plugins and DRA plugins. The approach
-will be sufficient the cover plugin registration, status and health-check functionality.
+will be sufficient the cover drivers registration, status and health-check functionality.
 
 
 ##### Allocation & Container Removal Flow
@@ -541,7 +629,7 @@ lifecycle loop triggers the add container call.
 Container Removal:<br>
 ![image](CCIRemoveSeqAlpha.jpg)<br>
 
-Figure 3: Container removal sequence diagram involving CCI plugins<br><br>
+Figure 3: Container removal sequence diagram involving CCI drivers<br><br>
 The container removal case is described as a sequence in Figure 3. After registering
 a removal event in the internal container lifecycle, the CCI manager is triggered 
 and invokes the CCI Driver to free any resources takes by the container. On
@@ -619,7 +707,7 @@ to implement this enhancement.
 -	Finish Identified Code refactoring of common building blocks (look at common pieces in all plugin-frameworks  in kubelet) 
 -	Look to what makes sense to leave inside Kubelet due to latency and use case requirements. Introduce community CCI drivers repo
 Similar to Kubernetes Scheduler Plugin repo
--	Have plugins specific to common use cases or environments
+-	Have CCI Drivers specific to common use cases or environments
 -	Smooth integration with scheduler extensions/ plugins …
 
 #### Beta to GA
@@ -722,14 +810,9 @@ The usual Kubernetes upgrade and downgrade strategy applies for in-tree componen
 Vendors must take care that upgrades and downgrades work with the drivers that
 they provide to customers
   
-We propose a solution of the bootstrapping problem for the cluster initialization by
-using the new CCI policy of CPU Manager. The policies allows the deployment of
-Pods not bound a CCI driver without requiring any plugin. The allocation of such
-Pods will be handled by std cpu manager. 
-  
 Pods which require CCI Driver will fail starting and report an error due to driver 
-unavailability.  If a CCI Plugin fails, Pods which were about to be allocated
-that were tied to the plugin will fail. Based on requirements a fallback mechanism 
+unavailability.  If a CCI Driver fails, Pods which were about to be allocated
+that were tied to the driver will fail. Based on requirements a fallback mechanism 
 can be implemented where such Pods fallback to a given std. QoS Model.
 
 ###### How can a rollout or rollback fail? Can it impact already running workloads?
@@ -848,15 +931,14 @@ No
 
 ### Troubleshooting
   
-We propose a solution of the bootstrapping problem for the cluster initialization 
-by using the new CCI policy of CPU Manager. The policies allows the deployment of
-Pods not bound a CCI driver without requiring any plugin. The allocation of such Pods
-will be handled by std cpu manager. Pods which require CCI Driver will fail starting
-and report an error due to driver unavailability.
-  
-If a CCI Plugin fails, Pods which were about to be allocated will fail. Based on 
+In alpha phase we propose to handle bootstrapping and failures due unavailable drivers 
+by going back to best-effort QoS. In post-alpha phase we will consider solutions of the bootstrapping and driver failure problem
+though an association mechanism between pods and drivers. If a pod does not require a driver CCI Manager can 
+provide allocation for this pod without and driver invocations, which will allow a smooth bootstrapping procedure of the cluster.
+
+If a CCI Driver fails, Pods associated with a driver which were about to be allocated will fail. Based on 
 requirements a fallback mechanism can be implemented where such Pods fallback to 
-a given std. QoS Model.
+a given std. QoS Model. 
 
 ![image](CCITroubleshooting.jpg)<br>
 
@@ -909,12 +991,12 @@ TBD in Beta.
   to this work our CCI approach concentrates on CPU and memory and will not require to do initial reservation of system resources to handle user applications. 
   The realisation of CCI is clearly separated from other components and will enable a functional and seamless integration with other device plugins and DRA plugins. 
   In later phase of CCI development will consider handling cpu and memory resources also for pods
-  not requiring drivers/plugins to run, by leveraging existing code base (post-alpha goal - 
+  not requiring drivers to run, by leveraging existing code base (post-alpha goal - 
   it can also include refactoring of existing code base). Further, CCI approach will cover required interfaces 
   to identify available cpu and memory resource so that correct scheduling can be performed. 
    
 ## Infrastructure Needed 
   
-We may choose to add in a repo that allows donations of plugins specific to particular
+We may choose to add in a repo that allows donations of drivers specific to particular
 use cases, in the way that we already do so for Kubernetes scheduler Plugins.  This 
 will allow a central place for the community to donate useful content.
