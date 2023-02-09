@@ -106,7 +106,7 @@ propose to guarantee the exclusive operation of CCI Manager on cpu and memory re
 through a feature gate and a requirement to have CPU Manager Policy as None. All pods will be handled 
 by the new CCI Manager. This will allow us to avoid state synchronization issues with cpu manager.
 To avoid the bootstrapping and driver-unavailability problems of CCI we propose to 
-use best-effort handling of those cases in the alpha state of the implementation augmented with additional logging. 
+use best-effort handling of those cases inside CCI Manager in the alpha stage of the implementation augmented with additional logging. 
 
 In a later phase of the implementation we can provide a proper mechanism to handle driver unavailability cases. 
 Given the existing Kubelet CPU/memory manager capabilities and their usefulness 
