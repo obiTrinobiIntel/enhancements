@@ -823,10 +823,14 @@ unavailability. If a CCI Driver fails, Pods which were about to be allocated
 that were tied to the driver will fail.
 
 ###### How can a rollout or rollback fail? Can it impact already running workloads?
+Alpha: 
+When the CCI Resource Manager feature is enabled we will handle all initial pod deployments as best-effort QoS
+until a CCI Driver gets deployed. After the driver becomes available all pod allocations will be handled by the driver. Proper driver failure mechanism will be implemented in post-alpha stage.
 
+Post Alpha:
 Failure of CCI drivers will have impact only over pods requiring CCI driver for 
-resource management. All other pods will not be impacted. THe impacted pods will
-an error message showing failure of the driver.
+resource management. All other pods will not be impacted. The impacted pods will
+fail with an error message showing failure of the driver.
 
 
 ###### What specific metrics should inform a rollback?
