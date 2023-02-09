@@ -852,7 +852,7 @@ TBD in Beta
 ### Monitoring Requirements
 
 Alpha: available cpus
-Beta: available cpus and other resource metrics(based on attributed)
+Beta: available cpus and other resource metrics(based on attributes)
 
 
 ###### How can an operator determine if the feature is in use by workloads?
@@ -863,13 +863,8 @@ Additionally, available resources will be updated.
 
 ###### How can someone using this feature know that it is working for their instance?
 
-- [ ] Events
-  - Event Reason: 
-- [x] API .status
-  - Condition name: CCI Driver Pod Readiness (populated by kubelet)
-  - Other field: 
-- [ ] Other (treat as last resort)
-  - Details:
+- [X] Other (treat as last resort)
+  - Details: check the kubelet metric `cci_manager_allocation_requests_total`
 
 ###### What are the reasonable SLOs (Service Level Objectives) for the enhancement?
 Alpha: k8s Cluster can be started without driver
@@ -877,24 +872,15 @@ Beta: Pods not using CCI Drivers continue to work as before.
 
 ###### What are the SLIs (Service Level Indicators) an operator can use to determine the health of the service?
 
-<!--
-Pick one more of these and delete the rest.
--->
-TBD in Beta
-- [ ] Metrics
+- [X] Metrics
   - Metric name:
-  - [Optional] Aggregation method:
-  - Components exposing the metric:
-- [ ] Other (treat as last resort)
-  - Details:
+    - cci_manager_allocation_requests_total
+    - cci_manager_allocation_errors_total
 
 ###### Are there any missing metrics that would be useful to have to improve observability of this feature?
 
-<!--
-Describe the metrics themselves and the reasons why they weren't added (e.g., cost,
-implementation difficulties, etc.).
--->
-* Liveness indicator for CCI Driver(post-alpha)
+- cci_manager_allocation_requests_total
+- cci_manager_allocation_errors_total
 
 ### Dependencies
 
