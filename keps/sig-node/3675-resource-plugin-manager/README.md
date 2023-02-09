@@ -347,6 +347,7 @@ container2:
 Pros:
   * Policy per container/pod available as a user choice
   * New policies can be provided to users through CCI Drivers without kubelet impact
+  * Resource quotas still supported 
 Cons:
   * User is required to understand the policies
 
@@ -386,6 +387,7 @@ Pros:
   * Does not require scheduler extension
   * Easy to process in CCI driver
   * No API extension required
+  * Resource quotas still supported 
   * More precision vs. policy only approach
 
 Cons:
@@ -439,6 +441,7 @@ Pros:
   * Can be used to expose attribute-based configurations
 
 Cons:
+  * Needs a solution for resource quotas (possibly through additional resource specificationin pod spec)
   * Requires Controller which can deal with cpu and memory resources
   * Scalability 
 
@@ -476,7 +479,7 @@ Figure 1: CCI Resource Manager Architecture inside Kubelet
 	    CCIResourceDriver string `json:"cciResourceDriver,omitempty" protobuf:"bytes,40,opt,name=cciResourceDriver"`
      …}
 
-The proposed extension relies on a new optional argument inside the Pod spec to `driverName`. 
+The proposed extension relies on a new optional argument inside the Pod spec to `cciResourceDriver`. 
 We use this optional argument to drive the allocation process. If the driver name is not provided,
 the Pod resources will be allocated through the standard CPU manager within t ubeletlet. An
 alternative association approach can be considered during the implementation which can avoid
@@ -516,7 +519,7 @@ Pod and having a specific CCI spec can be admitted to next stage of the allocati
 pipeline. The admission will return a reserved resource-set or error. In case of 
 successful admission the resource set will be stored in the CCI Store and made 
 available to the cpu manager policy. In the case of failure the error is reported
-back to user and the Pod allocation is cancelled.
+back to user and the Pod allocation is cancelled. In the admission function we pass a list of available cpusets which can allow us to inform drivers about system-reserved resources.
 
 `CCIAddContainerResource` function is called before container start with a given 
 Pod name and container name, cgroup of Pod and the container id. The driver than
@@ -967,6 +970,7 @@ issues during operation.
 
 ## Challenges and Considerations
 ###### Checkpoint assignments
+
 The driver must be able to pick up where it left off in case the Kubelet restarts for any reason. With regards to cpusets, the CPU Manager can reassign those values in the event of a Kubelet restart as the CPU Manager state also keeps track of Pods covered by CCI drivers. Information specific to the driver can be handled by the driver itself using a checkpoint file.
 
 ## Implementation History
