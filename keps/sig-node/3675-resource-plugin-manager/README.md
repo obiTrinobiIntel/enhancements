@@ -900,6 +900,15 @@ TBD in Beta.
   odd changes particular for particular chipsets.  Rather, we should choose to reduce
   complexity within the Kubelet over time.
 
+  One example how current managers could be lavareged for that can be seen in the [CPU Pooler](https://github.com/nokia/CPU-Pooler) 
+  project where a device plugin is used to handle cpu and memory management. In contrast 
+  to this work our CCI approach concentrates on CPU and memory and will not require to do initial reservation of system resources to handle user applications. 
+  The realisation of CCI is clearly separated from other components and will enable a functional and seamless integration with other device plugins and DRA plugins. 
+  In later phase of CCI development will consider handling cpu and memory resources also for pods
+  not requiring drivers/plugins to run, by leveraging existing code base (post-alpha goal - 
+  it can also include refactoring of existing code base). Further, CCI approach will cover required interfaces 
+  to identify available cpu and memory resource so that correct scheduling can be performed. 
+   
 ## Infrastructure Needed 
   
 We may choose to add in a repo that allows donations of plugins specific to particular
