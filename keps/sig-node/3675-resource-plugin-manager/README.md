@@ -200,8 +200,7 @@ extensibility in the future, the current pod specs will still work.
 1.  Support standard pod deployments not requiring CCI Drivers through CPU & Memory Manager: all QoS types
 1.  Support hint providers for topology manager
 1.  Interoperability with Device Plugins, DRA, et cetera. 
-1.  Identify and provide a minimal in-cluster operational core (from existing CPU Manager, Memory Manager, Topology Manager) either through in-tree libraries or through further KEPs. 
-1.  Replace CCI policy with a component integrated in None and Static CPU Manager policies.
+1.  Identify and provide a minimal in-cluster operational core (from existing CPU Manager, Memory Manager, Topology Manager) either through in-tree libraries or through further KEPs.
 1.  Gather feedback on the feature through surveys.
 1.  E2E testing including any new components, such as memory and topology.
 1.  Adding support for e2e tests in testgrid.
@@ -480,26 +479,21 @@ Figure 1: CCI Resource Manager Architecture inside Kubelet
 	    CCIResourceDriver string `json:"cciResourceDriver,omitempty" protobuf:"bytes,40,opt,name=cciResourceDriver"`
      …}
 
-The proposed extension relies on a new optional argument inside the Pod spec to `cciResourceDriver`. 
-We use this optional argument to drive the allocation process. If the driver name is not provided,
-the Pod resources will be allocated through the standard CPU manager within t ubeletlet. An
-alternative association approach can be considered during the implementation which can avoid
-Pod spec changes.
+For alpha phase CCIResource Manager will be used for all pods as long as the CCIResourceManager feature gate is enabled. Post-alpha we consider two options to associate CCI Drivers with pods: a new attribute in resource class object inspired by DRA or a pod spec option cciResourceDriver as shown above.
 
 1. CCI Resource Manager<br>
 These changes will need a separate resource manager component inside the container 
 manager which will handle drivers management tasks, including registration and 
 invocations of registered drivers.  These tasks will be managed via grpc for Pods who 
 require one or more resource management driver(s) to get successfully allocated.  In 
-the alpha version we provide to entry points  on admission, addContainer 
+the alpha version we provide two entry points  on admission, addContainer 
 and removeContainer lifetime events (drivers have to implement Admit, AddResource 
 and RemoveResource handlers accordingly). 
 
 2. CCI Resource Store<br>
 The Resource Manager uses a store to keep track of resourcesets which can include 
 cpusets, memory, etc ..  allocated by CCI Drivers. This information is gathered 
-per container. The store will be used by a new cpu manager policy to synchronize 
-the state between cpu manager and pluggable CCI Drivers.  The store offers the 
+per container. The gathered information will be used to provide data for on-node available resources. The store offers the 
 following interface to manage resource sets.
 
         +AddResource(Pod, container, resourceset)
@@ -518,8 +512,7 @@ of three functions:
 `CCIAdmit` function provides information if a given container belonging to a
 Pod and having a specific CCI spec can be admitted to next stage of the allocation 
 pipeline. The admission will return a reserved resource-set or error. In case of 
-successful admission the resource set will be stored in the CCI Store and made 
-available to the cpu manager policy. In the case of failure the error is reported
+successful admission the resource set will be stored in the CCI Storeand allocated. In the case of failure the error is reported
 back to user and the Pod allocation is cancelled. In the admission function we pass a list of available cpusets which can allow us to inform drivers about system-reserved resources.
 
 `CCIAddContainerResource` function is called before container start with a given 
@@ -667,7 +660,6 @@ to implement this enhancement.
 
 *	CCI Resource Manager: target code cvg >=80%
 *	CCI Store: target code cvg >=80%
-*	CCI CPU Manager Policy Component: target code cvg >=80%
 *	CCI Drivers Factory API: target code cvg >=80%
 
 ###### BETA
@@ -680,8 +672,10 @@ to implement this enhancement.
 
 ##### Integration tests
 ###### Alpha
-* CPU and CCI Manager Integration test: driver-based allocation and best-effort QoS 
-* State Consistency (CPU Manager + CCI) integrateion test
+* CCI Manager Integration test for cpu use-cases: driver-based allocation and best-effort QoS 
+* CCI State Consistency integrateion test
+* Kubelet restart integration test
+* System-reserved resources test
 ###### BETA
 * CPU Manager None, Static Policy Integration with CCI
 * CPU, Memory, Topology and CCI Manager Integration test
