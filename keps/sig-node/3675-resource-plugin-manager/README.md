@@ -503,7 +503,7 @@ following interface to manage resource sets.
 
 The resource sets are getting stored in a map where the lookup 
 is done via pod id and container name. For alpha verions the resource set includes the cpuset. In later stage the resource set will be extended with memory affinity information. The map together with the currently available resource will be serialized to 
-the file system to ensure proper covarage of kubelet restart and recovery scenarious.
+the file system to ensure proper covarage of kubelet restart and recovery scenarios.
 
 4. CCI Driver Interface<br>
 The initial interface of resource management drivers is very simple and consists 
@@ -708,8 +708,6 @@ to implement this enhancement.
 
 #### Alpha to Beta
 
-- Feature implemented behind a feature flag
-- Initial e2e tests completed and enabled
 - Integrate API feedback from users and community
 - Proven cross-components consistency (ideally via tests)
 - Handling of topology manager and memory manager use-cases
@@ -747,7 +745,7 @@ enhancement:
 
 ### Version Skew Strategy
 
-Version handling of Drivers will happend through the kubelet plugin framework. We will use semantic versions starting from alpha for the driver and update according to graduation process.
+Version handling of Drivers will happened through the kubelet plugin framework. We will use semantic versions starting from alpha for the driver and update according to graduation process(similar approach to device plugins and DRA).
 <!--
 If applicable, how will the component handle version skew with other
 components? What are the guarantees? Make sure this is in the test plan.
