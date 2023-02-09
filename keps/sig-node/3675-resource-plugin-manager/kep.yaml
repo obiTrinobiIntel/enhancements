@@ -3,6 +3,7 @@ kep-number: 3675
 authors:
   - "@obiTrinobiIntel"
   - "@catblade"
+  - "@adrianhoban"
 owning-sig: sig-node
 participating-sigs:
   - sig-node

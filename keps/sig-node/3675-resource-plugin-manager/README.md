@@ -1,6 +1,7 @@
 # KEP-3675: Pluggable Resource Management 
 Container Compute Interface (CCI) Driver Extension
 
+<!-- toc -->
 - [Release Signoff Checklist](#release-signoff-checklist)
 - [Summary](#summary)
 - [Motivation](#motivation)
@@ -8,10 +9,9 @@ Container Compute Interface (CCI) Driver Extension
     - [Alpha Goals](#alpha-goals)
     - [Beta &amp; Post-Beta Goals](#beta--post-beta-goals)
   - [Non-Goals](#non-goals)
-    - [Not In Scope for Alpha](#not-in-scope-for-alpha)
 - [Proposal](#proposal)
   - [User Stories](#user-stories)
-    - [Custom workloads, such as HPC/AI/ML](#custom-workloads-such-as-hpcaiml)
+    - [Custom workloads, such as Telco/HPC/AI/ML](#custom-workloads-such-as-telcohpcaiml)
     - [Power optimization of workloads](#power-optimization-of-workloads)
     - [Research of new resource management patterns within the cloud](#research-of-new-resource-management-patterns-within-the-cloud)
     - [User-specific plugins](#user-specific-plugins)
@@ -23,6 +23,7 @@ Container Compute Interface (CCI) Driver Extension
       - [Example 2.: Policy-based resource specification](#example-2-policy-based-resource-specification)
       - [Resource Manager Architecture](#resource-manager-architecture)
       - [Allocation &amp; Container Removal Flow](#allocation--container-removal-flow)
+      - [Post-Alpha &amp; GA Architectural Considerations](#post-alpha--ga-architectural-considerations)
   - [Test Plan](#test-plan)
       - [Unit tests](#unit-tests)
       - [Integration tests](#integration-tests)
@@ -35,12 +36,15 @@ Container Compute Interface (CCI) Driver Extension
   - [Version Skew Strategy](#version-skew-strategy)
 - [Production Readiness Review Questionnaire](#production-readiness-review-questionnaire)
   - [Feature Enablement and Rollback](#feature-enablement-and-rollback)
+    - [Alpha](#alpha)
+    - [Beta](#beta)
     - [Operational Requirements for Alpha:](#operational-requirements-for-alpha)
   - [Rollout, Upgrade and Rollback Planning](#rollout-upgrade-and-rollback-planning)
   - [Monitoring Requirements](#monitoring-requirements)
   - [Dependencies](#dependencies)
   - [Scalability](#scalability)
   - [Troubleshooting](#troubleshooting)
+- [Challenges and Considerations](#challenges-and-considerations)
 - [Implementation History](#implementation-history)
 - [Drawbacks](#drawbacks)
 - [Alternatives](#alternatives)
@@ -549,7 +553,7 @@ a reasonable timeout in alpha.
 
 After the initial alpha implementation we will consider the integration of the 
 Container Compute Interface “CCI” with exisiting CPU and Memory manager stack
-This can be achieved either by using already exising managers and introducing state 
+This can be achieved either by using already existing managers and introducing state 
 synchronization or through a common code base which can be invoked 
 from within the CCI Manager.
 
@@ -860,7 +864,7 @@ Figure 4: Troubleshooting Flows: Handling of pods requiring CCI driver and stand
 
 To illustrate this lets consider some of the flows described on Figure 4. We distriguish 
 between pods handled by CCI drivers(group 1 pods) and standard Pods(group 2 pods). Until the CCI driver is not started the pod admission of group 1 pods will fail with an admission error due to driver unavailabilty. Group 2 pods are not impaceted by and they
-can be deployed on the cluster. After the CCI Driver comes online  the addmission of 
+can be deployed on the cluster. After the CCI Driver comes online  the admission of 
 group 1 pods can continue. The admission transactions of group 1 and 2 are mutually exclusive. In later time the driver becomes unhealthy and the admission of second pod 
 from group 1 will fail.
 
