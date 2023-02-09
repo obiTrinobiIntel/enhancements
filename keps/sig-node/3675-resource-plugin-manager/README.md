@@ -181,18 +181,18 @@ today and move the complexity into external drivers.
 
 1.  Provide Initial infrastructure to support CCI Drivers and k8s Deployments requiring CCI Drivers.
 1.  Provide a feature gate to enable CCI Manager. The feature will require CPU Manager policy set to None.
-1.  Provide a CCI test driver which can demonstrate CCI Driver implementation requirementes and several resource management use-cases for cpu and memory.
+1.  Provide a CCI test driver which can demonstrate CCI Driver implementation requirementes and several resource management use-cases for cpu.
 1.  Provide documentation of the CCI Manager and the provided test driver plus illustration of the currently covered use-cases, including a sample driver.
 1.  Provide end-to-end tests using the sample driver.
 1.  Support seamless k8s start.
-1.  CCI Driver results (cpusets and memory affinity) are passed back to kubelet and allocated.
-1.  Handle resource management state for cpu and memory through CCI. 
+1.  CCI Driver results (cpusets) are passed back to kubelet and allocated.
+1.  Handle resource management state for cpu through CCI. 
 1.  Support proper fail mechanisms of Pods if CCI driver is not available - Error message + retry 
 1.  Continue cluster operation if CCI driver is not available
 1.  Podspecs:  Will be able to support current pod specs.  While there may be additional 
 extensibility in the future, the current pod specs will still work.
-1.  Guarantee that cpu and memory resources managed by CCI are visible for the scheduler to be able to 
-    correctly assign nodes.  This can be limited as far as simple CPU and memory counts for this version.
+1.  Guarantee that cpu resources managed by CCI are visible for the scheduler to be able to 
+    correctly assign nodes.  This can be limited as far as simple CPU counts for this version.
 
 #### Beta & Post-Beta Goals
 
@@ -277,8 +277,8 @@ be a simple way to allow users to meet their specific experiments.
 #### Roles
 
 1. Cluster operator or a system administrator is responsible to enable CCIResourceManager feature gate on kubelet and install a CCI Driver.
-1. CCI Drivers can be vendor specific or community drivers. The drivers are prvided/implemented by vendors or the kubernetes community.
-1. User specify a request of resources through attribute-based request.
+1. CCI Drivers can be vendor specific or community drivers. The drivers are provided/implemented by vendors or the kubernetes community.
+1. User specify a request of resources through policy or attribute-based request.
 
 ### Notes/Constraints/Caveats (Optional)
 
@@ -354,7 +354,7 @@ Cons:
 
 Attributed-based resource specification 
  
-To realize an attribute-based mechanism for compute resources we are considering mulitple options for post-alpha stage, such as:
+To realize an attribute-based mechanism for compute resources we are considering multiple options for post-alpha stage, such as:
 
 Annotation-based: 
 
@@ -473,7 +473,7 @@ Figure 1: CCI Resource Manager Architecture inside Kubelet
 	    //
 	    // +featureGate=CCIResourceManager
 	    // +optional
-	    CCIResourceDriver string `js”n:”cciResourceDriver,omitem”ty” protob”f:”bytes,40,opt,name=cciResourceDri”er”`
+	    CCIResourceDriver string `json:"cciResourceDriver,omitempty" protobuf:"bytes,40,opt,name=cciResourceDriver"`
      …}
 
 The proposed extension relies on a new optional argument inside the Pod spec to `driverName`. 
@@ -687,7 +687,7 @@ to implement this enhancement.
 ##### e2e tests
 ###### Alpha
 *	E2E tests including a test CCI Driver
-* E2E tests for showcasing resource allocations for cpu and memory through CCI
+* E2E tests for showcasing resource allocations for cpu through CCI
 
 ###### BETA
 *	End-to-End tests to cover all cci resource allocation use-cases
