@@ -320,28 +320,28 @@ Pods through policy mechanism defined as annotation. The CCI Driver will process
 Example with 4 containers in the pod: 
 
 annotation:
-  cci.resources.alpha.kubernetes.io/pod: cci-default
-  cci.resources.alpha.kubernetes.io/container.container1: cci-exclusive
-  cci.resources.alpha.kubernetes.io/container.container2: cci-shared
-  cci.resources.alpha.kubernetes.io/container.container3: other-policy
+*  cci.resources.alpha.kubernetes.io/pod: cci-default
+*  cci.resources.alpha.kubernetes.io/container.container1: cci-exclusive
+*  cci.resources.alpha.kubernetes.io/container.container2: cci-shared
+*  cci.resources.alpha.kubernetes.io/container.container3: other-policy
 
-container1: 
-  resources:
-    requests:
-      cpu: <>
-      memory: <>
-    limits:
-      cpu: <>
-      memory: <>
-
-container2: 
-  resources:
-    requests:
-      cpu: <>
-      memory: <>
-    limits:
-      cpu: <>
-      memory: <>    
+       container1: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <>
+        
+       container2: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <>   
 
 Pros:
   * Policy per container/pod available as a user choice
@@ -352,35 +352,36 @@ Cons:
 
 ##### Options for User APIs in Post-Alpha:  
 
-Attributed-based resource specification 
+##### Attributed-based resource specification 
  
 To realize an attribute-based mechanism for compute resources we are considering multiple options for post-alpha stage, such as:
 
-Annotation-based: 
+###### Attribute-based through annotations: 
 
 annotation:
-  cci.resources.alpha.kubernetes.io/pod: cci-default
-  cci.resources.alpha.kubernetes.io/container.container1: sibling-cores-required
-  cci.resources.alpha.kubernetes.io/container.container2: no-sibling-cores
-  cci.resources.alpha.kubernetes.io/container.container3: other-attributes
+*  cci.resources.alpha.kubernetes.io/pod: cci-default
+*  cci.resources.alpha.kubernetes.io/container.container1: sibling-cores-required
+*  cci.resources.alpha.kubernetes.io/container.container2: no-sibling-cores
+*  cci.resources.alpha.kubernetes.io/container.container3: other-attributes
 
-container1: 
-  resources:
-    requests:
-      cpu: <>
-      memory: <>
-    limits:
-      cpu: <>
-      memory: <>
+
+       container1: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <>
         
-container2: 
-  resources:
-    requests:
-      cpu: <>
-      memory: <>
-    limits:
-      cpu: <>
-      memory: <> 
+       container2: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <> 
 
 Pros:
   * Does not require scheduler extension
@@ -394,46 +395,46 @@ Cons:
   * No attribute awareness in the scheduler (could be addressed through DRA driver-subject of post alpha)
   * Attributes are CCI driver specific (consider standartization within sig-node)
 
-DRA-inspired Attribute-Claims:
+###### DRA-inspired Attribute-Claims:
 
 This example presents a set of per-core attributes in a claim that enables precision beyond
 a policy-only based approach: 
 
-  # A resource request which consists of:
-  # 2 exclusive cores (no other processes running on them)
-  # 	* pairs of cores shall be SMT siblings
-  # 	* they shall run at 2.1 GHz
-  # 	* there are no IRQs on the cores
-  # 6 exclusive cores (no other processes running on them)
-  # 4 shared cores (other processes can run on them)
-  apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: example-compute-claim-parameters
-    namespace: default
-  data:
-    cores: |
-      2
-      6
-      4
-    compute_attributes: |
-      exclusive, smt-sibling-required, 2.1GHz, no-irq
-      exclusive
-      shared
-  apiVersion: resource.k8s.io/v1alpha1
-  kind: ResourceClaimTemplate
-  metadata:
-    name: example-compute-claim-parameters-template
-    namespace: default
-  spec:
-    metadata:
-      labels:
-        app: inline-resource
-    spec:
-      resourceClassName: CPUressources
-      parametersRef:
-        kind: ConfigMap
-        name: example-compute-claim-parameters
+       # A resource request which consists of:
+       # 2 exclusive cores (no other processes running on them)
+       # 	* pairs of cores shall be SMT siblings
+       # 	* they shall run at 2.1 GHz
+       # 	* there are no IRQs on the cores
+       # 6 exclusive cores (no other processes running on them)
+       # 4 shared cores (other processes can run on them)
+       apiVersion: v1
+       kind: ConfigMap
+       metadata:
+         name: example-compute-claim-parameters
+         namespace: default
+       data:
+         cores: |
+           2
+           6
+           4
+         compute_attributes: |
+           exclusive, smt-sibling-required, 2.1GHz, no-irq
+           exclusive
+           shared
+       apiVersion: resource.k8s.io/v1alpha1
+       kind: ResourceClaimTemplate
+       metadata:
+         name: example-compute-claim-parameters-template
+         namespace: default
+       spec:
+         metadata:
+           labels:
+             app: inline-resource
+         spec:
+           resourceClassName: CPUressources
+           parametersRef:
+             kind: ConfigMap
+             name: example-compute-claim-parameters
 
 
 Pros:
@@ -658,17 +659,17 @@ to implement this enhancement.
 
 ###### Alpha
 
-*	CCI Resource Manager (CPU): target code cvg >=80%
-*	CCI Store (CPU): target code cvg >=80%
-*	CCI Drivers Factory API: target code cvg >=80%
+* CCI Resource Manager (CPU): target code cvg >=80%
+* CCI Store (CPU): target code cvg >=80%
+* CCI Drivers Factory API: target code cvg >=80%
 
 ###### BETA
 
-*	CCI Resource Manager (CPU + Memory): target code cvg >=80%
+* CCI Resource Manager (CPU + Memory): target code cvg >=80%
 * CCI Store (CPU + Memory): target code cvg >=80%
 * Pod Admission Race tests
 * Introduce fail-safety tests
-*	Performance/Scalabilty tests
+* Performance/Scalabilty tests
 
 
 ##### Integration tests
@@ -679,17 +680,17 @@ to implement this enhancement.
 ###### BETA
 * CPU Manager None, Static Policy Integration with CCI
 * CPU, Memory, Topology and CCI Manager Integration test
-*	Further integration tests with Device Manager and DRA
-*	Integration test including static QoS and driver-based allocation
+* Further integration tests with Device Manager and DRA
+* Integration test including static QoS and driver-based allocation
 
 ##### e2e tests
 ###### Alpha
-*	E2E tests including a test CCI Driver
+* E2E tests including a test CCI Driver
 * E2E tests for showcasing resource allocations for cpu through CCI - policy based
 * End-to-End tests to cover kubelet restart and system-reserved resources
 
 ###### BETA
-*	End-to-End tests to cover all cci resource allocation use-cases
+* End-to-End tests to cover all cci resource allocation use-cases
 * End-to-End tests to cover CCI Driver associtation mechanism
 * End-to_End tests with device plugins and DRA
 * Performance and resource utilization tests
@@ -702,10 +703,10 @@ to implement this enhancement.
 - Feature implemented behind a feature flag
 - Initial e2e tests completed and enabled
 - Integrate API feedback from users and community
--	Proven cross-components consistency (ideally via tests)
--	Handling of topology manager and memory manager use-cases
--	Finish Identified Code refactoring of common building blocks (look at common pieces in all plugin-frameworks  in kubelet) 
--	Look to what makes sense to leave inside Kubelet due to latency and use case requirements. Introduce community CCI drivers repo
+- Proven cross-components consistency (ideally via tests)
+- Handling of topology manager and memory manager use-cases
+- Finish Identified Code refactoring of common building blocks (look at common pieces in all plugin-frameworks  in kubelet) 
+- Look to what makes sense to leave inside Kubelet due to latency and use case requirements. Introduce community CCI drivers repo
 Similar to Kubernetes Scheduler Plugin repo
 -	Have CCI Drivers specific to common use cases or environments
 -	Smooth integration with scheduler extensions/ plugins …
