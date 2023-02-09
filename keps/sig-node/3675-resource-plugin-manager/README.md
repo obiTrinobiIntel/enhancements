@@ -147,7 +147,7 @@ Users would like to be able to address the following use cases:
 * The ability to allow vendors to release vendor-specific managers for their hardware
   and provide an interface while not having vendor-specific code within Kubelet.
 * Differentiate between types of cores and memory. <br>
-  Note - Dynamic resouce allocation does this with regular resources today.  We seek to
+  Note - Dynamic resouce allocation does this with regular resources today. We seek to
   extend this ability.
 * Differentiate between different configurations of cores and memory, for instance cores
   designated as performance versus those designated as efficiency cores 
@@ -394,7 +394,7 @@ Cons:
   * No attribute awareness in the scheduler (could be addressed through DRA driver-subject of post alpha)
   * Attributes are CCI driver specific (consider standartization within sig-node)
 
-DRA-inspired Atrribute-Claims:
+DRA-inspired Attribute-Claims:
 
 This example presents a set of per-core attributes in a claim that enables precision beyond
 a policy-only based approach: 
@@ -658,13 +658,14 @@ to implement this enhancement.
 
 ###### Alpha
 
-*	CCI Resource Manager: target code cvg >=80%
-*	CCI Store: target code cvg >=80%
+*	CCI Resource Manager (CPU): target code cvg >=80%
+*	CCI Store (CPU): target code cvg >=80%
 *	CCI Drivers Factory API: target code cvg >=80%
 
 ###### BETA
 
-*	CPU Manager None and Static Policy Integration with CCI
+*	CCI Resource Manager (CPU + Memory): target code cvg >=80%
+* CCI Store (CPU + Memory): target code cvg >=80%
 * Pod Admission Race tests
 * Introduce fail-safety tests
 *	Performance/Scalabilty tests
@@ -673,7 +674,6 @@ to implement this enhancement.
 ##### Integration tests
 ###### Alpha
 * CCI Manager Integration test for cpu use-cases: driver-based allocation and best-effort QoS 
-* CCI State Consistency integrateion test
 * Kubelet restart integration test
 * System-reserved resources test
 ###### BETA
@@ -685,10 +685,12 @@ to implement this enhancement.
 ##### e2e tests
 ###### Alpha
 *	E2E tests including a test CCI Driver
-* E2E tests for showcasing resource allocations for cpu through CCI
+* E2E tests for showcasing resource allocations for cpu through CCI - policy based
+* End-to-End tests to cover kubelet restart and system-reserved resources
 
 ###### BETA
 *	End-to-End tests to cover all cci resource allocation use-cases
+* End-to-End tests to cover CCI Driver associtation mechanism
 * End-to_End tests with device plugins and DRA
 * Performance and resource utilization tests
 
@@ -966,7 +968,7 @@ issues during operation.
 ## Challenges and Considerations
 ###### Checkpoint assignments
 
-The driver must be able to pick up where it left off in case the Kubelet restarts for any reason. With regards to cpusets, the CPU Manager can reassign those values in the event of a Kubelet restart as the CPU Manager state also keeps track of Pods covered by CCI drivers. Information specific to the driver can be handled by the driver itself using a checkpoint file.
+The driver must be able to pick up where it left off in case the Kubelet restarts for any reason. With regards to cpusets, the CCI Resource Manager can reassign those values in the event of a Kubelet restart as the CCI Resource Manager store also keeps track of Pods covered by CCI drivers. Information specific to the driver can be handled by the driver itself using a checkpoint file.
 
 ## Implementation History
 
