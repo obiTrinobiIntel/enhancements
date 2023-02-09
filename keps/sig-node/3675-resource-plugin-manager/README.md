@@ -121,7 +121,7 @@ current implementation of Kubelet managed resources with support for more comple
 use-cases without having to modify the Kubelet. The CCI extensions can coexist 
 with the existing CPU and memory allocation technique available to Kubernetes users today.
 
-NEW Although our alpha implementation provides an alternate route for managing CPUs through pluggable CPU management drivers, the long-term goal is to allow these drivers to be used NEW side-by-side with the built-in policies. Pods will be able to choose which policy they want their CPUs allocated with, and the machinery in the kubelet will take care to ensure NEW the proper CPU Management policy is invoked (be that from a builtin policy or from a driver).
+Although our alpha implementation provides an alternate route for managing CPUs through pluggable CPU management drivers, the long-term goal is to allow these drivers to be used side-by-side with the built-in policies. Pods will be able to choose which policy they want their CPUs allocated with, and the machinery in the kubelet will take care to ensure the proper CPU Management policy is invoked (be that from a builtin policy or from a driver).
 
 These changes will allow the community to disaggregate the long-term 
 stability and advancement of the Kubelet from the task of improving the compute 
