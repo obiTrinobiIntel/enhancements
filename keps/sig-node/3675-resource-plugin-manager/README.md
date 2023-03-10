@@ -879,7 +879,7 @@ Beta: Pods not using CCI Drivers continue to work as before.
 
 ###### Are there any missing metrics that would be useful to have to improve observability of this feature?
 
-- cci_manager_allocation_requests_total
+- cci_resource_manager_allocation_requests_total
 - cci_manager_allocation_errors_total
 
 ### Dependencies
@@ -934,12 +934,13 @@ by going back to best-effort QoS (in post-alpha this should result to pod failur
 though an association mechanism between pods and drivers. If a pod does not require a driver CCI Resource Manager can 
 provide allocation for this pod without and driver invocations, which will allow a smooth bootstrapping procedure of the cluster.
 
-After alpha phase if a CCI Driver fails, Pods associated with a driver which were about to be allocated will fail. 
+
 
 ![image](CCITroubleshooting.jpg)<br>
 
 Figure 4: Troubleshooting Flows: Handling of pods requiring CCI driver and standard pods wihtout CCI Driver requirements in the case of unhealthy driver.<br><br>
 
+After alpha phase if a CCI Driver fails, Pods associated with a driver which were about to be allocated will fail. 
 To illustrate this lets consider some of the flows described on Figure 4. We distriguish 
 between pods handled by CCI drivers(group 1 pods) and standard Pods(group 2 pods). Until the CCI driver is not started the pod admission of group 1 pods will fail with an admission error due to driver unavailabilty. Group 2 pods are not impaceted by and they
 can be deployed on the cluster. After the CCI Driver comes online  the admission of 
