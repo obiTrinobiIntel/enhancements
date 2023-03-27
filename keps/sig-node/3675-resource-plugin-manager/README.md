@@ -83,7 +83,7 @@ Items marked with (R) are required *prior to targeting to a milestone / release*
 Kubernetes compute management is tightly integrated with the Kubelet and the 
 existing suite of resources managers including the topology manager, CPU manager, 
 memory manager, and device manager. While these managers have added functionality that 
-has addressed a varied set of use cases, they do present the community with several challenges.
+address a varied set of use cases, they also present the community with challenges.
 
 Adding a new capability to one of these managers is slow moving and difficult 
 due to their complex interactions, the level of prudence required given the potential
@@ -106,23 +106,28 @@ We propose an iterative implementation approach:
 
 In the first stage (alpha) we propose adding a new component to the kubelet called the CCIResourceManager 
 that focuses exclusively on providing a mechanism for pluggable CPU management policies (as a replacement
-to the builtin CPUManager and its corresponding policies). Enablement of the CCIResourceManager will be blocked by a feature gate, 
+to the builtin CPUManager and its corresponding policies). Enablement of the CCIResourceManager will be blocked by a feature gate 
 which, when enabled, will trigger all CPU Management decisions to flow through the CCIResourceManager instead of the builtin CPUManager. 
-As such, the CPUManager policy MUST be set to none if this new feature gate is enabled. This will
+For this, the CPUManager policy MUST be set to none if this new feature gate is enabled. This will
 be enforced by the kubelet, causing it to "fail fast" if this invariant does not hold true.
 
-For now, only a single driver will be allowed to run on a node at any given time. Details of how we plan 
-to enforce this requirement as well as how we plan to (temporarily) handle bootstrapping a node that does not yet have 
-a pluggable CPU Management policy running can be found in Section [Throubleshooting]. In a later phase, we will provide a proper mechanism 
-to handle bootstrapping as well as cases where a driver becomes temporarily unavailable.
+For alpha, only a single driver will be allowed to run on a node at any given time. Details of how 
+we plan to enforce this requirement as well as how we plan to (temporarily) handle bootstrapping a 
+node that does not yet have a pluggable CPU Management policy running can be found in Section [Throubleshooting]. 
+In a later phase, we will provide a proper mechanism to handle bootstrapping in cases where a driver 
+becomes temporarily unavailable.
 
-The implication of CCI and the addition of the proposed CCI Resource Manager will be to allow compute capabilities such as CPU and memory to be managed outside
-of the Kubelet via pluggable CCI Drivers. This will allow users to augment the
-current implementation of Kubelet managed resources with support for more complex
-use-cases without having to modify the Kubelet. The CCI extensions can coexist 
+The implication of CCI and the addition of the proposed CCI Resource Manager will be to allow compute 
+capabilities such as CPU and memory to be managed outside of the Kubelet via pluggable CCI Drivers. 
+This will allow users to augment the current implementation of Kubelet managed resources with 
+support for more complex use-cases without having to modify the Kubelet. The CCI extensions can coexist 
 with the existing CPU and memory allocation technique available to Kubernetes users today.
 
-Although our alpha implementation provides an alternate route for managing CPUs through pluggable CPU management drivers, the long-term goal is to allow these drivers to be used side-by-side with the built-in policies. Pods will be able to choose which policy they want their CPUs allocated with, and the machinery in the kubelet will take care to ensure the proper CPU Management policy is invoked (be that from a builtin policy or from a driver).
+Although our alpha implementation provides an alternate route for managing CPUs through pluggable 
+CPU management drivers, the long-term goal is to allow these drivers to be used side-by-side with 
+the built-in policies. Pods will be able to choose which policy they want their CPUs allocated with, 
+and the machinery in the kubelet will take care to ensure the proper CPU Management policy is invoked 
+(be that from a builtin policy or from a driver).
 
 These changes will allow the community to disaggregate the long-term 
 stability and advancement of the Kubelet from the task of improving the compute 
@@ -136,17 +141,15 @@ for CPU, memory, and topology remain limited.  Additionally, the number of manag
 becoming internal to the Kubelet continues to increase; we should find a more 
 dynamic and pluggable way of handling these resources.  
 
-Operating systems work by allowing drivers and pluggable resources.  This includes various
-policies in how CPU, memory, and devices are allocated.  Kubernetes can be viewed as being 
-an the operating system of the cloud.  Allowing specialty modules to address the use cases
+Operating systems work by allowing drivers and pluggable resources, including varied
+policies for CPU, memory, and devices allocation.  Kubernetes can be viewed as the operating 
+system of the cloud.  Allowing specialty modules to address the use cases
 directly, rather than continuing to add complexity by continuing to modify the kubelet, 
 will allow the greatest scope of abilities while halting continued increases of complexity 
 within the core of the Kubelet.
 
-Users would like to be able to address the following use cases:
+This KEP aims to address the following challenges:
 
-* The ability to allow vendors to release vendor-specific managers for their hardware
-  and provide an interface while not having vendor-specific code within Kubelet.
 * Differentiate between types of cores and memory. <br>
   Note - Dynamic resouce allocation does this with regular resources today. We seek to
   extend this ability.
@@ -156,6 +159,8 @@ Users would like to be able to address the following use cases:
   may be built for performance, power reduction, cpu savings, et cetera.  <br>
   Note:  Currently, there are very limited sets of available topology policies.  Every
   new policy must be approved and be lockstep with the Kuberenetes release process.
+* Allow vendors to release vendor-specific managers for their hardware
+  and provide an interface, keeping vendor-specific code external to the Kubelet.
 * Be able to hot-plug and test new resource managers.  
 * Be able to remove some of the complexity with current setup and, over time, reduce
   the amount of code contained within Kubelet.  Instead, build a library with specific
