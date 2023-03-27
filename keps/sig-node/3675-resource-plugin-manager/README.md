@@ -301,100 +301,22 @@ the CCI Driver implementation.
 
 #### Compute Specification Option
 
-The CCI model combined with some of the capabilities introduced in the Dynamic 
-Resource Allocation (DRA) KEP [3], offers the ability to transition compute 
+The CCI model combined with some of the capabilities introduced in the Dynamic
+Resource Allocation (DRA) KEP [3], offers the ability to transition compute
 resource allocation behavior from being a cluster-admin dominated configuration
 to one that allows users with precise compute requirements to articulate the
-compute attributes that they need. 
+compute attributes that they need.
 
 In several domains such Streaming, Telco, HPC, and AI/ML, users require
-fine-grained compute resource control to maximize their key performance 
+fine-grained compute resource control to maximize their key performance
 indicators.  They need an API option that can be made available through
-upstream Kubernetes components and specific compute resource allocation 
+upstream Kubernetes components and specific compute resource allocation
 drivers.
 
 ##### User API for Alpha: Policy-based resource specification - no scheduler impact
 
-The first option which we will implement is a resource allocation configuration for Kubernetes
-Pods through policy mechanism defined as annotation. The CCI Driver will process the policy for each pod/container. 
-
-Example with 4 containers in the pod: 
-
-annotation:
-*  cci.resources.alpha.kubernetes.io/pod: cci-default
-*  cci.resources.alpha.kubernetes.io/container.container1: cci-exclusive
-*  cci.resources.alpha.kubernetes.io/container.container2: cci-shared
-*  cci.resources.alpha.kubernetes.io/container.container3: other-policy
-
-       container1: 
-         resources:
-           requests:
-             cpu: <>
-             memory: <>
-           limits:
-             cpu: <>
-             memory: <>
-        
-       container2: 
-         resources:
-           requests:
-             cpu: <>
-             memory: <>
-           limits:
-             cpu: <>
-             memory: <>   
-
-Pros:
-  * Policy per container/pod available as a user choice
-  * New policies can be provided to users through CCI Drivers without kubelet impact
-  * Resource quotas still supported 
-Cons:
-  * User is required to understand the policies
-
-##### Options for User APIs in Post-Alpha:  
-
-##### Attributed-based resource specification 
- 
-To realize an attribute-based mechanism for compute resources we are considering multiple options for post-alpha stage, such as:
-
-###### Attribute-based through annotations: 
-
-annotation:
-*  cci.resources.alpha.kubernetes.io/pod: cci-default
-*  cci.resources.alpha.kubernetes.io/container.container1: sibling-cores-required
-*  cci.resources.alpha.kubernetes.io/container.container2: no-sibling-cores
-*  cci.resources.alpha.kubernetes.io/container.container3: other-attributes
-
-
-       container1: 
-         resources:
-           requests:
-             cpu: <>
-             memory: <>
-           limits:
-             cpu: <>
-             memory: <>
-        
-       container2: 
-         resources:
-           requests:
-             cpu: <>
-             memory: <>
-           limits:
-             cpu: <>
-             memory: <> 
-
-Pros:
-  * Does not require scheduler extension
-  * Easy to process in CCI driver
-  * No API extension required
-  * Resource quotas still supported 
-  * More precision vs. policy only approach
-
-Cons:
-  * Better suited for specialized use-cases
-  * No attribute awareness in the scheduler (could be addressed through DRA driver-subject of post alpha)
-  * Attributes are CCI driver specific (consider standartization within sig-node)
+In this proposal we focus on API which can be lavaraged by using Dynamic Resource Allocation
+Claim constructs 
 
 ###### DRA-inspired Attribute-Claims:
 
@@ -992,7 +914,91 @@ TBD in Beta.
   not requiring drivers to run, by leveraging existing code base (post-alpha goal - 
   it can also include refactoring of existing code base). Further, CCI approach will cover required interfaces 
   to identify available cpu and memory resource so that correct scheduling can be performed. 
-   
+
+### Alternatives for API Handling
+There different alternative methodologies how to enabled further configuration capbilities for the user in kubernetes, 
+each with some pro and cons.
+
+One option here could be to suggest a change or extension of the pod spec interface to define cpu and 
+memory resources. This option has the drawback that it will need to touch the pod specification mechanisms and the 
+change might have impact to different groups using kubernetes. In this KEP we would like to follow less distruptive approaches.
+
+An alternative which does not requeire pod spec changes is to define a resource allocation configuration for Kubernetes
+Pods through policy mechanism as annotation. The CCI Driver will process the policy for each pod/container.
+The policy mechanism can't offer the same level of granularity as the attributed-based configuration methodlogy.
+
+Example with 4 containers in the pod: 
+
+annotation:
+*  cci.resources.alpha.kubernetes.io/pod: cci-default
+*  cci.resources.alpha.kubernetes.io/container.container1: cci-exclusive
+*  cci.resources.alpha.kubernetes.io/container.container2: cci-shared
+*  cci.resources.alpha.kubernetes.io/container.container3: other-policy
+
+       container1: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <>
+        
+       container2: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <>   
+
+Pros:
+  * Policy per container/pod available as a user choice
+  * New policies can be provided to users through CCI Drivers without kubelet impact
+  * Resource quotas still supported 
+Cons:
+  * User is required to understand the policies
+
+
+annotation:
+*  cci.resources.alpha.kubernetes.io/pod: cci-default
+*  cci.resources.alpha.kubernetes.io/container.container1: sibling-cores-required
+*  cci.resources.alpha.kubernetes.io/container.container2: no-sibling-cores
+*  cci.resources.alpha.kubernetes.io/container.container3: other-attributes
+
+
+       container1: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <>
+        
+       container2: 
+         resources:
+           requests:
+             cpu: <>
+             memory: <>
+           limits:
+             cpu: <>
+             memory: <> 
+
+Pros:
+  * Does not require scheduler extension
+  * Easy to process in CCI driver
+  * No API extension required
+  * Resource quotas still supported 
+  * More precision vs. policy only approach
+
+Cons:
+  * Better suited for specialized use-cases
+  * No attribute awareness in the scheduler (could be addressed through DRA driver-subject of post alpha)
+  * Attributes are CCI driver specific (consider standartization within sig-node)
+
+
 ## Infrastructure Needed 
   
 We may choose to add in a repo that allows donations of drivers specific to particular
