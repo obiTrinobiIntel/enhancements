@@ -575,9 +575,9 @@ CCI Drivers GRPC Protocol:
 5. Scheduling<br>
 In the alpha version of the CCI Resource Manager, scheduling decisions will be taken by DRA Controllers based
 on claim specification. To ensure the correct scheduling of both kind of pods:
-pods without claim (scheduled by k8s scheduler) and claim-based pods, all pods have to provide resource request and limit fields.
+pods without claim (scheduled by k8s scheduler) and claim-based pods, all pods have to provide resource request and limit fields.<br>
 
-As the kubernetes scheduler works as a stateless component, for alpha version the cores/memory requests provided in the CCI configuration as part of the resource claim have to match pod resource requests and limits provided in pod spec. Further CCI-awareness and requests validation can be provided by the DRA controller implementation.
+As the kubernetes scheduler works as a stateless component, for alpha version the cores/memory requests provided in the CCI configuration as part of the resource claim have to match pod resource requests and limits provided in pod spec. Further CCI-awareness and requests validation can be provided by the DRA controller implementation.<br>
 
 Post-alpha we will consider adding an extension to the scheduler which can propagate further information from CCI spec down to the scheduler.
 
