@@ -448,7 +448,7 @@ and remove Container lifetime events (drivers have to implement Admit, AddResour
 and RemoveResource handlers accordingly). The admission entry point includes also information about the
 claim associated that container and it's parameters.
 
-2. CCI Resource Store<br>
+1. CCI Resource Store<br>
 The Resource Manager uses a store to keep track of resourcesets which can include
 cpusets, etc ..  allocated by CCI Drivers. This information is gathered
 per container. The gathered information will be used to provide data for on-node available resources. The store offers the following interface to manage resource sets.
@@ -462,7 +462,7 @@ per container. The gathered information will be used to provide data for on-node
 The resource sets are getting stored in a map where the lookup
 is done via pod id and container name. For alpha versions the resource set includes the cpuset. In later stage the resource set will be extended with memory affinity information. The map together with the currently available resource will be serialized to the file system to ensure proper coverage of kubelet restart and recovery scenarios through the Save and Load functions (/var/lib/kubelet/cci_manager_state).
 
-4. CCI Driver Interface<br>
+1. CCI Driver Interface<br>
 The initial interface of resource management drivers is very simple and consists
 of three functions:
 
@@ -572,17 +572,17 @@ CCI Drivers GRPC Protocol:
         string err = 1;
     }
 
-5. Scheduling<br>
+1. Scheduling<br>
 In the alpha version of the CCI Resource Manager, scheduling decisions will be taken by DRA Controllers based
 on claim specification. To ensure the correct scheduling of both kind of pods:
 pods without claim (scheduled by k8s scheduler) and claim-based pods, all pods have to provide resource request and limit fields.<br> As the kubernetes scheduler works as a stateless component, for alpha version the cores/memory requests provided in the CCI configuration as part of the resource claim have to match pod resource requests and limits provided in pod spec. Further CCI-awareness and requests validation can be provided by the DRA controller implementation.<br> Post-alpha we will consider adding an extension to the scheduler which can propagate further information from CCI spec down to the scheduler.
 
-6. CCI Drivers Factory API<br>
+1. CCI Drivers Factory API<br>
 The KEP includes a new staged API which enabled the CCI driver creation. The
 API can be used by a driver implementor to start a driver and automatically
 register it against Kubelet's CCI Resource Manager.
 
-7.	CCI Drivers Registration<br>
+1.	CCI Drivers Registration<br>
 The CCI driver registration can be handled by the kubelet plugin framework.
 This approach is already used with device plugins and DRA plugins. The approach
 will be sufficient the cover drivers registration, status and health-check functionality. The framework also provides a versioning mechanism for plugins (similar to DRA approach).
